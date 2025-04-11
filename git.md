@@ -1,8 +1,16 @@
 # Git tricks
 
-Create key:
+Create key(s). Imagine you want two profiles:
+
 ```bash
-ssh-keygen -t ed25519 -C "your_email@example.com"
+ssh-keygen -t ed25519 -C "apicatoste@gmail.com" -f ~/.ssh/id_ed25519_personal
+ssh-keygen -t ed25519 -C "alvaro.picatoste@work.com" -f ~/.ssh/id_ed25519_work
+```
+
+Pass content of the key to the clipboard:
+
+```bash
+pbcopy < ~/.ssh/id_ed25519_personal.pub
 ```
 
 - Check remote url:
@@ -10,7 +18,6 @@ ssh-keygen -t ed25519 -C "your_email@example.com"
 ```bash
 git remote -v
 ```
-
 
 Check SSH agent is working properly:
 

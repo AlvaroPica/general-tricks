@@ -163,3 +163,7 @@ It should look something like:
 ### Comand terminal shortcuts
 
 `Ctrl + U` : Borra desde el cursor hasta el principio de la línea
+
+### Userful shortcuts
+
+`Shift + Cmd + .`: See hidden files in Finder
