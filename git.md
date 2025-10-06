@@ -1,5 +1,13 @@
 # Git tricks
 
+Table of contents:
+
+- [Create key(s)](https://github.com/AlvaroPica/general-tricks/blob/main/general-tricks/git.md#create-keys)
+- [Check remote url](https://github.com/AlvaroPica/general-tricks/blob/main/general-tricks/git.md#check-remote-url)
+- [Check Agent is working properly](https://github.com/AlvaroPica/general-tricks/blob/main/general-tricks/git.md#check-agent-is-working-properly)
+- [Combine Two Git Profiles on One Computer](https://github.com/AlvaroPica/general-tricks/blob/main/general-tricks/git.md#combine-two-git-profiles-on-one-computer)
+
+
 Create key(s). Imagine you want two profiles:
 
 ```bash
@@ -82,12 +90,13 @@ Use different Git identities (personal & work) with separate SSH keys and config
 
   - **Example: Set Git repo for personal url**
 
-    ```bash
+  ```bash
   git remote set-url origin git@github.com-personal:AlvaroPica/repo-name.git
   ```
-- **Example clone a personal repo**:
 
-  ```bash
+- **Example clone a personal repo**  
+
+    ```bash
   git clone git@github.com-personal:AlvaroPica/repo-name.git
   ```
 
@@ -95,3 +104,9 @@ Use different Git identities (personal & work) with separate SSH keys and config
 `ssh -T git@github.com-personal`  # should say Hi AlvaroPica!
 
 Now each Git repo can use the right identity just by setting the remote host to the correct alias. By default git uses ` git@github.com` and assigns the first identify it can find or the first file it tries (e.g. id_ed25519)
+
+## Merge a branch and put your commit after all changes
+
+```bash
+git merge --no-ff <branch-name>
+```
