@@ -85,6 +85,11 @@ Use different Git identities (personal & work) with separate SSH keys and config
     ```bash
   git remote set-url origin git@github.com-personal:AlvaroPica/repo-name.git
   ```
+- **Example clone a personal repo**:
+
+  ```bash
+  git clone git@github.com-personal:AlvaroPica/repo-name.git
+  ```
 
 -- **Verify you can login to Github**:
 `ssh -T git@github.com-personal`  # should say Hi AlvaroPica!
