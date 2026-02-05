@@ -1,0 +1,216 @@
+wsl + ubuntu + windows + vscode/cursor quick notes
+
+objetivo
+- desarrollar en linux real dentro de windows
+- usar docker desktop integrado
+- repos dentro de filesystem linux
+- usar vscode / cursor conectados a wsl
+
+
+------------------------------------------
+comprobar wsl
+------------------------------------------
+
+powershell:
+
+wsl --version
+wsl -l -v
+
+esperado:
+- ubuntu instalada
+- version 2
+
+
+comprobar distro por defecto:
+
+wsl -l
+
+si docker-desktop sale como default → cambiar:
+
+wsl --set-default Ubuntu
+
+
+------------------------------------------
+comprobar que docker funciona en wsl
+------------------------------------------
+
+dentro de ubuntu:
+
+docker ps
+
+si funciona → integración correcta
+
+
+------------------------------------------
+estructura de proyectos
+------------------------------------------
+
+trabajar siempre en:
+
+~/projects/repos
+
+crear:
+
+mkdir -p ~/projects/repos
+
+clonar:
+
+cd ~/projects/repos
+git clone <repo>
+
+
+NO trabajar en:
+
+/mnt/c/
+
+
+------------------------------------------
+acceso a archivos wsl desde windows
+------------------------------------------
+
+explorador:
+
+\\wsl$\Ubuntu\home\<usuario>
+
+
+------------------------------------------
+git dentro de wsl
+------------------------------------------
+
+comprobar config:
+
+git config --global --list
+
+si falta:
+
+git config --global user.name "nombre"
+git config --global user.email "email"
+git config --global core.autocrlf input
+
+
+------------------------------------------
+ssh dentro de wsl
+------------------------------------------
+
+NO usar symlink a .ssh de windows (problemas permisos)
+
+comprobar claves:
+
+ls ~/.ssh
+
+si no existen:
+
+mkdir ~/.ssh
+chmod 700 ~/.ssh
+
+copiar desde windows:
+
+cp /mnt/c/Users/<usuario>/.ssh/id_* ~/.ssh/
+cp /mnt/c/Users/<usuario>/.ssh/config ~/.ssh/ 2>/dev/null
+cp /mnt/c/Users/<usuario>/.ssh/known_hosts ~/.ssh/ 2>/dev/null
+
+chmod 600 ~/.ssh/*
+
+test:
+
+ssh -T git@github.com
+
+
+------------------------------------------
+comprobar que vscode server está instalado
+------------------------------------------
+
+ls ~/.vscode-server/bin
+
+
+------------------------------------------
+abrir repo en vscode / cursor
+------------------------------------------
+
+desde wsl:
+
+cd ~/projects/repos/<repo>
+code .
+cursor .
+
+comprobar abajo izquierda en vscode:
+
+WSL: Ubuntu
+
+
+------------------------------------------
+si aparece "exec format error"
+------------------------------------------
+
+comprobar interop:
+
+cat /etc/wsl.conf
+
+debe contener:
+
+[interop]
+enabled=true
+appendwindows_path=true
+
+si se modifica:
+
+powershell:
+wsl --shutdown
+
+
+test interop:
+
+notepad.exe
+
+si abre → ok
+
+
+------------------------------------------
+terminal recomendada
+------------------------------------------
+
+windows terminal
+ubuntu anclado en barra tareas
+
+
+------------------------------------------
+flujo diario
+------------------------------------------
+
+abrir ubuntu
+
+cd ~/projects/repos/<repo>
+
+code .
+cursor .
+
+docker / git / python se ejecutan dentro de linux
+
+
+------------------------------------------
+comandos útiles
+------------------------------------------
+
+abrir carpeta actual en windows:
+
+explorer.exe .
+
+cerrar wsl:
+
+wsl --shutdown
+
+ver distros:
+
+wsl -l -v
+
+
+------------------------------------------
+estado final correcto
+------------------------------------------
+
+ubuntu funciona en wsl2
+docker accesible desde wsl
+git + ssh funcionan
+vscode / cursor conectan a wsl
+repos en filesystem linux
+interop windows activo
