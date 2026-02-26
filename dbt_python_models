@@ -1,0 +1,127 @@
+# dbt Python Models on Databricks — Best Practices
+
+## Why the execution context hangs silently
+
+The log line `Databricks adapter: Creating execution context response=<Response [200]>` is the
+first sign of life after `START python ... model [RUN]`. When it never appears, one of the
+following is happening:
+
+| Cause | Symptoms | Fix |
+|---|---|---|
+| **Orphaned contexts from a killed run** | Hangs immediately; other models worked before | Restart the cluster to clear all contexts |
+| **Context pool exhausted (145-slot limit)** | Hangs on shared/busy cluster | Detach notebooks; enable idle tracking; restart |
+| **Cluster auto-terminated between runs** | Hangs up to 20 min (SDK default timeout) | Increase `autotermination_minutes` or pre-warm |
+| **SQL Warehouse slow to start** | Hangs on incremental models before Python runs | Switch to Serverless SQL Warehouse |
+| **Token/auth 403** | Usually fails instead of hangs | Check PAT or OAuth token validity |
+
+### Our case
+Running `dbt run` and killing it mid-flight (Ctrl+C or background task killed) leaves an
+execution context open on the cluster. Subsequent runs queue behind it and never get a slot.
+**Fix: restart the cluster.**
+
+---
+
+## `table` vs `incremental` — impact on context hang risk
+
+| | `materialized: table` | `materialized: incremental` |
+|---|---|---|
+| Compute steps | 1 (Python only) | 2 (Python → staging, then SQL MERGE) |
+| Pre-checks before Python runs | None | Schema check + relation-existence query |
+| Hang risk | Low | Higher — more API round-trips |
+| Orphaned artifacts on failure | None | Staging table left behind |
+
+**Recommendation:** use `materialized: table` during development. Only switch to `incremental`
+in production when reprocessing the full dataset is too expensive.
+
+---
+
+## Cluster configuration
+
+### Spark config — must NOT have this
+```
+spark.databricks.chauffeur.enableIdleContextTracking = false
+```
+If set to `false`, Databricks stops recycling idle context slots automatically. Remove it so the
+cluster can evict least-recently-used contexts on its own.
+
+### Cluster sizing for dbt Python models
+- Do not share the dbt cluster with heavy interactive notebook workloads.
+- Each notebook attached to the cluster consumes one context slot even when idle.
+- Detach unused notebooks before running long dbt pipelines.
+
+---
+
+## profiles.yml — retry and timeout settings
+
+`connect_retries` and `connect_timeout` are silently ignored unless `retry_all: true` is also
+set (known bug in dbt-databricks, no fix as of early 2026):
+
+```yaml
+outputs:
+  dev_personal_all_purpose:
+    type: databricks
+    host: "..."
+    http_path: "..."
+    token: "..."
+    connect_retries: 3        # retries on transient failures
+    connect_timeout: 60       # seconds per attempt
+    retry_all: true           # required — without this the two above do nothing
+```
+
+For deeper retry control at the DBSQL connector level (handles HTTP 503s):
+```yaml
+    connection_parameters:
+      _retry_stop_after_attempts_duration: 1200   # 20 min total retry window
+      _retry_stop_after_attemps_count: 60         # note: intentional typo in SDK key name
+```
+
+---
+
+## Per-model config
+
+```yaml
+config:
+  timeout: 3600               # max runtime in seconds; default 0 = no limit
+  submission_method: all_purpose_cluster   # or job_cluster / workflow_job
+```
+
+`workflow_job` is the recommended submission method for production — it launches the model as
+a proper Databricks Workflow run, which is trackeable in the UI, retryable, and avoids the
+Command Execution API context slot problem entirely.
+
+---
+
+## Debug logging
+
+When a run hangs, add this env var to see every HTTP call the adapter makes:
+
+```bash
+DBT_DATABRICKS_CONNECTOR_LOG_LEVEL=DEBUG dbt run -s my_model --target dev_personal_all_purpose
+```
+
+This reveals exactly which API call is blocked and the underlying HTTP response codes.
+
+---
+
+## Recovery checklist
+
+When `Creating execution context` never appears:
+
+1. Check cluster state: `databricks clusters get <cluster_id> --profile <profile>`
+2. Check for too many installed libraries or PENDING installs:
+   `databricks libraries cluster-status <cluster_id> --profile <profile>`
+3. Detach notebooks from the cluster in the Databricks UI
+4. Restart the cluster: `databricks clusters restart <cluster_id> --profile <profile>`
+5. Wait for `"state": "RUNNING"` before re-running dbt
+6. If it still hangs, enable debug logging and inspect the HTTP responses
+
+---
+
+## Submission methods comparison
+
+| Method | Startup cost | Context limit risk | Good for |
+|---|---|---|---|
+| `all_purpose_cluster` | ~0 s (cluster already running) | Yes (145-slot limit) | Development |
+| `job_cluster` | 3–5 min per model | No (dedicated cluster) | Production, isolated runs |
+| `workflow_job` | ~30 s | No (Workflow API, not Command API) | Production, observable runs |
+| `serverless_cluster` | ~10 s | No | Cutting edge — custom packages still unstable (early 2026) |
